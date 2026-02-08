@@ -73,113 +73,96 @@ export default function ImageUpload({ onRecommendations, loading, setLoading, oc
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      {/* Upload Dropzone - Premium Glass */}
-      <motion.div
-        whileHover={{ scale: 1.02 }}
-        transition={{ duration: 0.3 }}
+    <div className="space-y-5 w-full">
+      {/* Upload Dropzone */}
+      <div
         {...getRootProps()}
         className={`
-          upload-zone
-          rounded-3xl p-12 cursor-pointer
-          text-center relative overflow-hidden
-          ${isDragActive ? 'glow-border-cyan' : ''}
+          upload-zone rounded-xl p-10 cursor-pointer text-center
+          transition-all duration-300
+          ${isDragActive ? 'border-nexus-brown bg-nexus-beige/60' : ''}
         `}
       >
         <input {...getInputProps()} />
 
-        {/* Gradient Glow Effect */}
-        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-purple-500/5 pointer-events-none"></div>
-
-        <div className="relative z-10">
-          {preview ? (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="space-y-6"
-            >
-              <div className="relative w-full max-w-md mx-auto aspect-square rounded-2xl overflow-hidden glass-card">
-                <img
-                  src={preview}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <p className="text-sm text-gray-400">
-                Click or drag to change image
-              </p>
-            </motion.div>
-          ) : (
-            <div className="space-y-6">
-              {/* Upload Icon with Gradient */}
-              <motion.div
-                animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                className="text-7xl"
-              >
-                📸
-              </motion.div>
-
-              <div className="space-y-2">
-                <p className="text-2xl font-bold gradient-text">
-                  {isDragActive ? 'Drop your photo here' : 'Upload your photo'}
-                </p>
-                <p className="text-gray-400">
-                  Drag & drop or click to browse
-                </p>
-                <p className="text-sm text-gray-500">
-                  Supports JPG, PNG up to 10MB
-                </p>
-              </div>
+        {preview ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="space-y-4"
+          >
+            <div className="relative w-full max-w-xs mx-auto aspect-[3/4] rounded-lg overflow-hidden shadow-md">
+              <img
+                src={preview}
+                alt="Preview"
+                className="w-full h-full object-cover"
+              />
             </div>
-          )}
-        </div>
-      </motion.div>
+            <p className="text-sm text-nexus-gray">
+              Click or drag to change image
+            </p>
+          </motion.div>
+        ) : (
+          <div className="space-y-4 py-4">
+            {/* Upload Icon */}
+            <div className="mx-auto w-16 h-16 rounded-full bg-nexus-beige flex items-center justify-center">
+              <svg className="w-8 h-8 text-nexus-brown" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+              </svg>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xl font-serif text-nexus-text">
+                {isDragActive ? 'Drop your photo here' : 'Upload your photo'}
+              </p>
+              <p className="text-nexus-gray text-sm">
+                Drag & drop or click to browse
+              </p>
+              <p className="text-xs text-nexus-gray/60">
+                JPG, PNG up to 10MB
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
 
-      {/* Submit Button - Gradient with Glow */}
+      {/* Submit Button */}
       <motion.button
-        whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         onClick={handleSubmit}
         disabled={!image || loading}
         className={`
-          w-full py-5 px-8 rounded-2xl font-bold text-lg
-          transition-all duration-300 relative overflow-hidden
+          w-full py-4 px-8 rounded-sm text-xs font-bold tracking-widest uppercase
+          transition-all duration-300
           ${!image || loading
-            ? 'glass opacity-50 cursor-not-allowed'
-            : 'glass-strong glow-border-gradient hover:shadow-2xl'
+            ? 'bg-nexus-beige text-nexus-gray cursor-not-allowed'
+            : 'bg-[#A06448] hover:bg-[#8c563e] text-white shadow-md hover:shadow-lg'
           }
         `}
       >
-        {/* Gradient Background */}
-        {!loading && image && (
-          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-pink-500/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+        {loading ? (
+          <span className="flex items-center justify-center gap-3">
+            <div className="loading-spinner"></div>
+            <span>Analyzing your style...</span>
+          </span>
+        ) : (
+          <span>GET MY RECOMMENDATIONS</span>
         )}
-
-        <span className="relative z-10 flex items-center justify-center gap-3">
-          {loading ? (
-            <>
-              <div className="loading-spinner"></div>
-              <span className="gradient-text">Analyzing your style...</span>
-            </>
-          ) : (
-            <span className="gradient-text">Get My Recommendations ✨</span>
-          )}
-        </span>
       </motion.button>
 
-      {/* Error Message - Glass Card */}
+      {/* Error Message */}
       {error && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass-card rounded-2xl p-4 border-red-500/30"
+          className="bg-red-50 border border-red-200 rounded-lg p-4"
         >
           <div className="flex items-start gap-3">
-            <span className="text-2xl">⚠️</span>
+            <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+            </svg>
             <div>
-              <p className="font-semibold text-red-400">Error</p>
-              <p className="text-sm text-gray-400">{error}</p>
+              <p className="font-semibold text-red-700 text-sm">Something went wrong</p>
+              <p className="text-sm text-red-600 mt-0.5">{error}</p>
             </div>
           </div>
         </motion.div>

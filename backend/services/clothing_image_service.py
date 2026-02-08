@@ -22,18 +22,23 @@ class ClothingImageService:
         self._cache: Dict[str, Optional[str]] = {}
 
     def _build_query(self, description: str, category: str) -> str:
-        """Build a targeted search query for a clothing item."""
-        filler = {"a", "an", "the", "or", "with", "for", "e.g.", "etc", "and", "of", "in"}
+        """Build a targeted search query for a clothing item with fashion-specific keywords."""
+        # Remove common filler words
+        filler = {"a", "an", "the", "or", "with", "for", "e.g.", "etc", "and", "of", "in", "very"}
         words = [w.strip("*-•") for w in description.split() if w.lower().strip("*-•") not in filler]
         base = " ".join(words)
-
+        
+        # Add category-specific fashion search terms
         suffix_map = {
-            "top": "clothing product photo",
-            "bottom": "pants trousers clothing product photo",
-            "shoes": "shoes footwear product photo",
+            "top": "fashion clothing online shop product image",
+            "bottom": "pants trousers fashion clothing online shop product image",
+            "shoes": "footwear fashion online shop product image",
         }
-        suffix = suffix_map.get(category, "clothing product photo")
-        return f"{base} {suffix}"
+        suffix = suffix_map.get(category, "fashion clothing online shop product image")
+        
+        # Build final query with brand/shopping focus
+        query = f"{base} {suffix} buy"
+        return query
 
     # ------------------------------------------------------------------ #
     #  Primary: duckduckgo_search library (real image results, no API key)
@@ -50,7 +55,7 @@ class ClothingImageService:
                 with DDGS() as ddgs:
                     results = list(ddgs.images(
                         keywords=query,
-                        max_results=5,
+                        max_results=15,  # Get more results to filter better
                         safesearch="moderate",
                     ))
                     return results
@@ -59,21 +64,38 @@ class ClothingImageService:
             results = await asyncio.to_thread(_sync_search)
 
             if results:
-                # Prefer images from shopping / product sites
-                preferred = ["amazon", "nordstrom", "zara", "hm.com", "uniqlo",
-                             "asos", "macys", "shopify", "target", "nike", "adidas",
-                             "myntra", "flipkart", "ajio"]
+                # Prioritize images from shopping / fashion sites
+                tier1_sites = ["amazon", "nordstrom", "zara", "hm.com", "uniqlo", 
+                              "asos", "macys", "nike", "adidas", "forever21", "gap",
+                              "oldnavy", "target", "walmart"]
+                tier2_sites = ["myntra", "flipkart", "ajio", "shopify", "etsy",
+                              "zalando", "boohoo", "prettylittlething", "shein"]
+                
+                # First try tier 1 sites
                 for r in results:
                     url = r.get("image", "")
-                    if any(d in url.lower() for d in preferred):
-                        logger.info(f"DDG preferred image: {url[:80]}")
+                    source = r.get("source", "").lower()
+                    if any(site in url.lower() or site in source for site in tier1_sites):
+                        logger.info(f"DDG tier1 image: {url[:80]}")
+                        return url
+                
+                # Then try tier 2 sites
+                for r in results:
+                    url = r.get("image", "")
+                    source = r.get("source", "").lower()
+                    if any(site in url.lower() or site in source for site in tier2_sites):
+                        logger.info(f"DDG tier2 image: {url[:80]}")
                         return url
 
-                # Fallback to first result
-                url = results[0].get("image", "")
-                if url:
-                    logger.info(f"DDG image: {url[:80]}")
-                    return url
+                # Fallback to first result if it looks like a product image
+                for r in results:
+                    url = r.get("image", "")
+                    # Filter out obvious non-product images
+                    bad_indicators = ["pinterest", "youtube", "instagram", "facebook", 
+                                     "twitter", "reddit", "tumblr", "blog"]
+                    if url and not any(bad in url.lower() for bad in bad_indicators):
+                        logger.info(f"DDG filtered image: {url[:80]}")
+                        return url
 
         except ImportError:
             logger.warning("duckduckgo_search not installed – pip install duckduckgo_search")
@@ -86,11 +108,12 @@ class ClothingImageService:
     #  Fallback: Bing image scrape (no API key)
     # ------------------------------------------------------------------ #
     async def _search_bing_scrape(self, query: str) -> Optional[str]:
-        """Scrape Bing Images for a result (no API key needed)."""
+        """Scrape Bing Images for a result (no API key needed) with shopping filter."""
         import httpx, re as _re
         try:
             encoded = urllib.parse.quote_plus(query)
-            url = f"https://www.bing.com/images/search?q={encoded}&first=1&qft=+filterui:photo-photo"
+            # Add shopping filter to Bing search
+            url = f"https://www.bing.com/images/search?q={encoded}&qft=+filterui:photo-photo+filterui:imagesize-large&first=1"
             headers = {
                 "User-Agent": (
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -98,14 +121,28 @@ class ClothingImageService:
                     "Chrome/120.0.0.0 Safari/537.36"
                 ),
                 "Accept": "text/html",
+                "Accept-Language": "en-US,en;q=0.9",
             }
             async with httpx.AsyncClient(timeout=12.0, follow_redirects=True) as client:
                 resp = await client.get(url, headers=headers)
                 if resp.status_code == 200:
                     matches = _re.findall(r'murl&quot;:&quot;(https?://[^&]+?)&quot;', resp.text)
+                    
                     if matches:
-                        logger.info(f"Bing scrape image: {matches[0][:80]}")
-                        return matches[0]
+                        # Filter out non-shopping sites
+                        bad_indicators = ["pinterest", "youtube", "instagram", "facebook", 
+                                         "twitter", "reddit", "tumblr"]
+                        
+                        for match in matches[:10]:  # Check first 10 results
+                            if not any(bad in match.lower() for bad in bad_indicators):
+                                logger.info(f"Bing scrape image: {match[:80]}")
+                                return match
+                        
+                        # If all have bad indicators, return first one anyway
+                        if matches:
+                            logger.info(f"Bing scrape (fallback) image: {matches[0][:80]}")
+                            return matches[0]
+                            
         except Exception as e:
             logger.warning(f"Bing scrape failed for '{query}': {e}")
         return None

@@ -18,12 +18,14 @@ class RecommendationEngine:
         self,
         openrouter_service: OpenRouterService,
         groq_service: GroqService,
-        cache_manager: CacheManager
+        cache_manager: CacheManager,
+        cloudflare_diffusion=None
     ):
         self.openrouter_service = openrouter_service
         self.groq_service = groq_service
         self.cache_manager = cache_manager
         self.clothing_image_service = ClothingImageService()
+        self.cloudflare_diffusion = cloudflare_diffusion
 
     def _clean_json_response(self, response_str: str) -> str:
         """
@@ -233,6 +235,42 @@ Be specific and practical in your recommendations."""
                 if recommendations:
                     await asyncio.gather(*[fetch_images_for_recommendation(rec) for rec in recommendations])
 
+                # Generate outfit visualizations using img2img if cloudflare service is available
+                generated_avatars = []
+                if self.cloudflare_diffusion and recommendations:
+                    logger.info("Generating outfit visualizations on the person...")
+                    
+                    async def generate_outfit_for_recommendation(rec, idx):
+                        """Generate outfit visualization for a single recommendation."""
+                        try:
+                            # Build complete outfit description from recommendation
+                            outfit_desc = f"{rec.top}, {rec.bottom}, {rec.shoes}"
+                            if rec.accessories:
+                                outfit_desc += f", {', '.join(rec.accessories)}"
+                            
+                            # Generate image of person wearing this new outfit
+                            result_image_base64 = await self.cloudflare_diffusion.generate_outfit_on_person(
+                                original_image_base64=image,
+                                outfit_description=outfit_desc,
+                                body_attributes=user_physical_attributes
+                            )
+                            
+                            avatar_data = {
+                                "outfit_name": rec.outfit_name,
+                                "outfit_index": idx + 1,
+                                "image": f"data:image/png;base64,{result_image_base64}",
+                                "description": outfit_desc
+                            }
+                            generated_avatars.append(avatar_data)
+                            logger.info(f"Generated outfit visualization {idx + 1}: {rec.outfit_name}")
+                            
+                        except Exception as e:
+                            logger.warning(f"Failed to generate outfit visualization for {rec.outfit_name}: {e}")
+                    
+                    # Generate outfit visualizations for all recommendations concurrently
+                    await asyncio.gather(*[generate_outfit_for_recommendation(rec, idx) for idx, rec in enumerate(recommendations)])
+                    logger.info(f"Successfully generated {len(generated_avatars)} outfit visualizations")
+
             # Build response
             processing_time = time.time() - total_start
             
@@ -249,7 +287,7 @@ Be specific and practical in your recommendations."""
                 is_appropriate=is_appropriate,
                 critique=critique,
                 improvement_suggestions=suggestions,
-                generated_avatars=[]  # No avatar generation
+                generated_avatars=generated_avatars  # Include generated outfit visualizations
             )
 
         except Exception as e:
