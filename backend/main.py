@@ -5,12 +5,13 @@ import os
 from dotenv import load_dotenv
 import logging
 import base64
+import binascii
 
 from services.openrouter_service import OpenRouterService
 from services.recommendation_engine import RecommendationEngine
 from services.groq_service import GroqService
 from services.clothing_image_service import ClothingImageService
-from services.cloudflare_diffusion_service import CloudflareDiffusionService
+from services.gemini_vton_service import GeminiVTONService
 from utils.cache_manager import CacheManager
 from models.schemas import UserAttributes
 from pydantic import BaseModel
@@ -22,12 +23,100 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent))
 
-# Load environment variables
-env_path = Path(__file__).parent.parent / "config" / ".env"
-load_dotenv(env_path)
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def _unwrap_nested_base64(payload: str) -> str:
+    current = payload.strip().strip('"').strip("'")
+
+    if current.startswith("data:image/"):
+        current = current.split(",", 1)[1] if "," in current else current
+
+    for _ in range(2):
+        try:
+            raw = base64.b64decode(current, validate=False)
+        except (binascii.Error, ValueError):
+            break
+
+        # If the decoded bytes are already an image, stop unwrapping.
+        if raw.startswith(b"\x89PNG\r\n\x1a\n") or raw.startswith(b"\xff\xd8\xff") or raw.startswith((b"GIF87a", b"GIF89a")) or (raw.startswith(b"RIFF") and len(raw) > 12 and raw[8:12] == b"WEBP"):
+            break
+
+        try:
+            decoded_text = raw.decode("ascii").strip().strip('"').strip("'")
+        except UnicodeDecodeError:
+            break
+
+        base64_chars = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=\r\n")
+        if decoded_text and all(ch in base64_chars for ch in decoded_text):
+            current = decoded_text
+            continue
+
+        break
+
+    return current
+
+
+def _guess_image_mime_from_base64(image_base64: str) -> str:
+    payload = _unwrap_nested_base64(image_base64)
+    if payload.startswith("data:image/"):
+        try:
+            return payload.split(";", 1)[0].split(":", 1)[1]
+        except (IndexError, ValueError):
+            return "image/png"
+
+    if "," in payload and payload.split(",", 1)[0].endswith(";base64"):
+        payload = payload.split(",", 1)[1]
+
+    try:
+        raw = base64.b64decode(payload, validate=False)
+    except (binascii.Error, ValueError):
+        return "image/png"
+
+    if raw.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if raw.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if raw.startswith((b"GIF87a", b"GIF89a")):
+        return "image/gif"
+    if raw.startswith(b"RIFF") and len(raw) > 12 and raw[8:12] == b"WEBP":
+        return "image/webp"
+
+    return "image/png"
+
+
+def _to_data_url(image_base64: str) -> str:
+    payload = _unwrap_nested_base64(image_base64)
+    if payload.startswith("data:image/"):
+        return payload
+
+    mime = _guess_image_mime_from_base64(payload)
+    if "," in payload and payload.split(",", 1)[0].endswith(";base64"):
+        payload = payload.split(",", 1)[1]
+    return f"data:{mime};base64,{payload}"
+
+# Load environment variables from one authoritative location.
+# Prefer repo-root .env to avoid stale keys from parent shell or other files.
+project_root = Path(__file__).parent.parent
+env_candidates = [
+    project_root / ".env",
+    project_root / "config" / ".env",
+    project_root.parent / ".env",
+    Path.cwd() / ".env",
+    Path(__file__).parent / ".env",
+]
+
+loaded_env = None
+for env_path in env_candidates:
+    if env_path.exists():
+        load_dotenv(env_path, override=True)
+        loaded_env = env_path
+        logger.info(f"Loaded environment from: {env_path}")
+        break
+
+if loaded_env is None:
+    logger.warning("No .env file found in expected locations.")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -51,27 +140,34 @@ app.add_middleware(
 )
 
 # Initialize Services
-openrouter_service = OpenRouterService(api_key=os.getenv("OPENROUTER_API_KEY"))
+openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+openrouter_service = OpenRouterService(api_key=openrouter_api_key) if openrouter_api_key else None
+if not openrouter_service:
+    logger.warning("OPENROUTER_API_KEY not found. OpenRouter quick analysis endpoint will use Groq instead.")
+
 cache_manager = CacheManager()
-groq_service = GroqService()
+groq_service = GroqService(api_key=os.getenv("GROQ_API_KEY"))
 clothing_image_service = ClothingImageService()
 
-# Initialize Cloudflare Diffusion Service (optional - only if keys are provided)
-cloudflare_diffusion = None
-if os.getenv("CLOUDFLARE_ACCOUNT_ID") and os.getenv("CLOUDFLARE_API_TOKEN"):
-    cloudflare_diffusion = CloudflareDiffusionService(
-        account_id=os.getenv("CLOUDFLARE_ACCOUNT_ID"),
-        api_token=os.getenv("CLOUDFLARE_API_TOKEN")
+# Initialize Gemini VTON Service (optional - only if key is provided)
+vton_service = None
+if os.getenv("GEMINI_API_KEY"):
+    gemini_model = os.getenv("GEMINI_MODEL", "nano-banana-pro-preview")
+    vton_service = GeminiVTONService(
+        api_key=os.getenv("GEMINI_API_KEY"),
+        model=gemini_model
     )
-    logger.info("Cloudflare Diffusion Service initialized")
+    logger.info(f"Gemini VTON model: {gemini_model}")
+    logger.info("Gemini VTON Service initialized")
 else:
-    logger.warning("Cloudflare credentials not found. Avatar generation will be unavailable.")
+    logger.warning("GEMINI_API_KEY not found. VTON generation will be unavailable.")
 
 recommendation_engine = RecommendationEngine(
     openrouter_service=openrouter_service,
     groq_service=groq_service,
     cache_manager=cache_manager,
-    cloudflare_diffusion=cloudflare_diffusion
+    clothing_image_service=clothing_image_service,
+    vton_service=vton_service
 )
 
 # Request model for clothing images
@@ -172,7 +268,11 @@ async def quick_analyze(
         image_base64 = base64.b64encode(image_data).decode('utf-8')
         
         prompt = "Briefly describe what this person is wearing. Just the basics: items and colors."
-        description = await openrouter_service.describe_outfit(image_base64, prompt)
+
+        if openrouter_service:
+            description = await openrouter_service.describe_outfit(image_base64, prompt)
+        else:
+            description = await groq_service.analyze_image(image_base64, prompt)
         
         return {
             "success": True,
@@ -238,16 +338,16 @@ async def generate_avatar(
         Base64 encoded image of the generated avatar
     """
     try:
-        if not cloudflare_diffusion:
+        if not vton_service:
             raise HTTPException(
                 status_code=503,
-                detail="Avatar generation service is not configured. Please add CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN to your .env file."
+                detail="Avatar generation service is not configured. Please add GEMINI_API_KEY to your .env file."
             )
         
         logger.info(f"Generating avatar: {outfit_description[:50]}...")
         
         # Generate the avatar image
-        image_base64 = await cloudflare_diffusion.generate_outfit_visualization(
+        image_base64 = await vton_service.generate_outfit_visualization(
             outfit_description=outfit_description,
             body_type=body_type,
             skin_tone=skin_tone,
@@ -256,7 +356,7 @@ async def generate_avatar(
         
         return {
             "success": True,
-            "image": f"data:image/png;base64,{image_base64}",
+            "image": _to_data_url(image_base64),
             "message": "Avatar generated successfully"
         }
         
@@ -271,25 +371,25 @@ async def generate_custom_image(
     prompt: str = Form(...),
     width: int = Form(512),
     height: int = Form(768),
-    model: str = Form("sdxl")
+    model: str = Form("gemini-3-pro-image-preview")
 ):
     """
-    Generate a custom image using Cloudflare Workers AI with a custom prompt.
+    Generate a custom image using Gemini image generation.
     
     Args:
         prompt: Full text prompt for image generation
         width: Image width (256-2048)
         height: Image height (256-2048)
-        model: Model to use (sdxl, sd15, dreamshaper)
+        model: Model to use (currently fixed to gemini-3-pro-image-preview)
     
     Returns:
         Base64 encoded generated image
     """
     try:
-        if not cloudflare_diffusion:
+        if not vton_service:
             raise HTTPException(
                 status_code=503,
-                detail="Image generation service is not configured. Please add CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN to your .env file."
+                detail="Image generation service is not configured. Please add GEMINI_API_KEY to your .env file."
             )
         
         # Validate dimensions
@@ -301,7 +401,7 @@ async def generate_custom_image(
         
         logger.info(f"Generating custom image: {prompt[:50]}...")
         
-        image_base64 = await cloudflare_diffusion.generate_avatar(
+        image_base64 = await vton_service.generate_avatar(
             prompt=prompt,
             width=width,
             height=height,
@@ -310,7 +410,7 @@ async def generate_custom_image(
         
         return {
             "success": True,
-            "image": f"data:image/png;base64,{image_base64}",
+            "image": _to_data_url(image_base64),
             "message": "Image generated successfully"
         }
         
@@ -323,17 +423,19 @@ async def generate_custom_image(
 @app.post("/api/generate-outfit-on-person")
 async def generate_outfit_on_person(
     image: UploadFile = File(...),
-    outfit_description: str = Form(...),
+    garment_image: UploadFile = File(None),
+    outfit_description: str = Form(""),
     body_type: str = Form("average"),
     skin_tone: str = Form("medium"),
     gender: str = Form("person")
 ):
     """
-    Generate image of the SAME person wearing a NEW outfit using img2img.
+    Generate image of the SAME person wearing a NEW outfit using Gemini VTON.
     
     Args:
         image: Original photo of the person
-        outfit_description: Full description of the new outfit to put on the person
+        garment_image: Optional garment/product image to transfer onto the person
+        outfit_description: Optional text instruction for garment styling
         body_type: Body type descriptor (slim, average, athletic, curvy)
         skin_tone: Skin tone descriptor (fair, medium, tan, dark)
         gender: Gender descriptor (man, woman, person)
@@ -342,13 +444,13 @@ async def generate_outfit_on_person(
         Base64 encoded image showing the same person in the new outfit
     """
     try:
-        if not cloudflare_diffusion:
+        if not vton_service:
             raise HTTPException(
                 status_code=503,
-                detail="Outfit generation service is not configured. Please add CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN to your .env file."
+                detail="Outfit generation service is not configured. Please add GEMINI_API_KEY to your .env file."
             )
         
-        logger.info(f"Generating new outfit on person: {outfit_description[:50]}...")
+        logger.info("Generating new outfit on person using Gemini VTON...")
         
         # Read and encode the original image
         image_data = await image.read()
@@ -357,29 +459,59 @@ async def generate_outfit_on_person(
             raise HTTPException(status_code=400, detail="Image too large. Max 10MB.")
         
         image_base64 = base64.b64encode(image_data).decode('utf-8')
+
+        body_attrs = {
+            'body type': body_type,
+            'skin tone': skin_tone,
+            'gender': gender
+        }
+
+        result_image_base64 = None
+
+        if garment_image is not None:
+            garment_data = await garment_image.read()
+            if len(garment_data) > 10 * 1024 * 1024:
+                raise HTTPException(status_code=400, detail="Garment image too large. Max 10MB.")
+
+            garment_base64 = base64.b64encode(garment_data).decode('utf-8')
+
+            person_mime = image.content_type or "image/jpeg"
+            garment_mime = garment_image.content_type or "image/jpeg"
+
+            result_image_base64 = await vton_service.generate_outfit_from_garment(
+                original_image_base64=image_base64,
+                garment_image_base64=garment_base64,
+                body_attributes=body_attrs,
+                person_mime_type=person_mime,
+                garment_mime_type=garment_mime,
+                extra_instruction=outfit_description,
+            )
+        else:
+            if not outfit_description.strip():
+                raise HTTPException(status_code=400, detail="Provide garment_image or outfit_description.")
         
-        # Generate the new outfit on the same person
-        result_image_base64 = await cloudflare_diffusion.generate_outfit_on_person(
-            original_image_base64=image_base64,
-            outfit_description=outfit_description,
-            body_attributes={
-                'body type': body_type,
-                'skin tone': skin_tone,
-                'gender': gender
-            }
-        )
+            result_image_base64 = await vton_service.generate_outfit_on_person(
+                original_image_base64=image_base64,
+                outfit_description=outfit_description,
+                body_attributes=body_attrs
+            )
         
         return {
             "success": True,
-            "image": f"data:image/png;base64,{result_image_base64}",
+            "image": _to_data_url(result_image_base64),
             "message": "Outfit visualization generated successfully"
         }
         
     except HTTPException as he:
         raise he
     except Exception as e:
-        logger.error(f"Error generating outfit on person: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate outfit: {str(e)}")
+        raw_error = str(e)
+        sanitized_error = raw_error.replace("inline_data=Blob(data='", "inline_data=Blob(data='[truncated]")
+        if len(sanitized_error) > 400:
+            sanitized_error = f"{sanitized_error[:400]}..."
+
+        logger.exception("Error generating outfit on person")
+        raise HTTPException(status_code=500, detail=f"Failed to generate outfit: {sanitized_error}")
 
 if __name__ == "__main__":
     import uvicorn

@@ -11,3 +11,4 @@ openai
 groq
 duckduckgo_search
 Pillow>=10.0.0
+google-genai

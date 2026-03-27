@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from enum import Enum
 
 class BodyType(str, Enum):
@@ -48,7 +48,7 @@ class OutfitRecommendation(BaseModel):
     description: str
     top: str
     bottom: str
-    shoes: str
+    shoes: Optional[str] = None
     accessories: List[str]
     colors: List[str]
     brands: Optional[List[str]] = None
@@ -78,7 +78,7 @@ class RecommendationResponse(BaseModel):
     is_appropriate: bool
     critique: Optional[str] = None
     improvement_suggestions: Optional[str] = None
-    generated_avatars: List[str] = [] # List of URLs for multiple avatars
+    generated_avatars: List[Dict[str, Any]] = [] # Structured avatar payloads for multiple outfits
     avatar_url: Optional[str] = None # Keep for backward compatibility or primary avatar
 
 class QuickAnalysisResponse(BaseModel):

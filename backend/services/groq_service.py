@@ -1,19 +1,17 @@
 import os
 import logging
 from groq import AsyncGroq
-from dotenv import load_dotenv
-
-load_dotenv(dotenv_path="../config/.env")
 
 logger = logging.getLogger(__name__)
 
 class GroqService:
-    def __init__(self):
-        api_key = os.getenv("GROQ_API_KEY")
+    def __init__(self, api_key: str = None):
+        api_key = api_key or os.getenv("GROQ_API_KEY")
+        self.client = None
         if not api_key:
             logger.warning("GROQ_API_KEY not found in environment variables")
-        
-        self.client = AsyncGroq(api_key=api_key)
+        else:
+            self.client = AsyncGroq(api_key=api_key)
         self.model = "meta-llama/llama-4-scout-17b-16e-instruct" # Current Llama 4 Vision model
         logger.info(f"GroqService initialized with model: {self.model}")
 
@@ -23,6 +21,9 @@ class GroqService:
         Returns the text response.
         """
         try:
+            if not self.client:
+                raise RuntimeError("GROQ_API_KEY is missing. Please set GROQ_API_KEY in your environment.")
+
             logger.info(f"Sending image analysis request to Groq ({self.model})...")
             
             # Ensure base64 string has prefix if missing (Groq expects data URL or just base64? SDK handles URL usually)

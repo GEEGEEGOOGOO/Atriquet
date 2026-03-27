@@ -2,30 +2,31 @@ import logging
 import time
 from typing import Dict, Any
 import json
-import re
 from models.schemas import RecommendationResponse, PhysicalAnalysis, OutfitRecommendation, UserAttributes
+from typing import Optional
+from services.clothing_image_service import ClothingImageService
 from services.openrouter_service import OpenRouterService
 from services.groq_service import GroqService
-from services.clothing_image_service import ClothingImageService
 from utils.cache_manager import CacheManager
 
 logger = logging.getLogger(__name__)
 
 class RecommendationEngine:
-    """Main engine orchestrating the recommendation pipeline using Groq (Llama 4 Scout) and OpenRouter."""
+    """Main engine orchestrating the recommendation pipeline using Groq (Llama 4 Scout)."""
 
     def __init__(
         self,
-        openrouter_service: OpenRouterService,
+        openrouter_service: Optional[OpenRouterService],
         groq_service: GroqService,
         cache_manager: CacheManager,
-        cloudflare_diffusion=None
+        clothing_image_service: Optional[ClothingImageService] = None,
+        vton_service=None
     ):
         self.openrouter_service = openrouter_service
         self.groq_service = groq_service
         self.cache_manager = cache_manager
-        self.clothing_image_service = ClothingImageService()
-        self.cloudflare_diffusion = cloudflare_diffusion
+        self.clothing_image_service = clothing_image_service
+        self.vton_service = vton_service
 
     def _clean_json_response(self, response_str: str) -> str:
         """
@@ -68,39 +69,15 @@ class RecommendationEngine:
         include_brands: bool = False
     ) -> RecommendationResponse:
         """
-        Simplified Workflow using ONLY Gemma 3:
+        Simplified Workflow using Groq Llama:
         1. Analyze image and validate outfit appropriateness for occasion
         2. If inappropriate: Suggest 3 different outfit styles
-        3. No avatar generation (removed for simplicity)
+        3. No visualization generation
         """
         total_start = time.time()
 
         try:
-            # Step 1: Extract user attributes for avatar generation
-            logger.info("Extracting user attributes for avatar generation...")
-            
-            attributes_prompt = """Analyze this person's physical attributes for avatar generation.
-Provide ONLY the following information in this exact format:
-
-BODY_TYPE: [slim/athletic/average/curvy/plus-size]
-SKIN_TONE: [fair/light/medium/tan/brown/dark]
-HEIGHT: [short/average/tall]
-GENDER: [male/female/non-binary]
-
-Be concise and specific."""
-            
-            attributes_text = await self.groq_service.analyze_image(image, attributes_prompt)
-            logger.info(f"User attributes extracted: {attributes_text[:200]}")
-            
-            # Parse user attributes
-            user_attrs = {}
-            for line in attributes_text.split('\n'):
-                if ':' in line:
-                    key, value = line.split(':', 1)
-                    key = key.strip().lower().replace('_', ' ')
-                    user_attrs[key] = value.strip()
-            
-            # Step 2: Analyze outfit appropriateness
+            # Analyze outfit appropriateness
             logger.info("Analyzing outfit with Groq (Llama 4 Vision)...")
             
             analysis_prompt = f"""Analyze this image and determine if the outfit is appropriate for the occasion: "{occasion}".
@@ -118,7 +95,6 @@ OUTFIT 1:
 - Description: [Brief description]
 - Top: [Specific top item]
 - Bottom: [Specific bottom item]
-- Shoes: [Specific shoes]
 - Colors: [Color palette]
 - Why it works: [Rationale]
 
@@ -159,6 +135,7 @@ Be specific and practical in your recommendations."""
 
             # Build recommendations list
             recommendations = []
+            generated_avatars = []
             
             if not is_appropriate:
                 # Parse the 3 outfit recommendations
@@ -177,7 +154,7 @@ Be specific and practical in your recommendations."""
                             if f"{field_name}:" in text:
                                 start = text.find(f"{field_name}:") + len(f"{field_name}:")
                                 # Find next field or end
-                                next_fields = ["Name:", "Description:", "Top:", "Bottom:", "Shoes:", "Colors:", "Why it works:", "OUTFIT"]
+                                next_fields = ["Name:", "Description:", "Top:", "Bottom:", "Colors:", "Why it works:", "OUTFIT"]
                                 end = len(text)
                                 for nf in next_fields:
                                     pos = text.find(nf, start)
@@ -190,7 +167,6 @@ Be specific and practical in your recommendations."""
                         description = extract_field(outfit_text, "Description") or "Recommended outfit"
                         top = extract_field(outfit_text, "Top") or "Appropriate top"
                         bottom = extract_field(outfit_text, "Bottom") or "Appropriate bottom"
-                        shoes = extract_field(outfit_text, "Shoes") or "Appropriate shoes"
                         colors_str = extract_field(outfit_text, "Colors") or "Neutral colors"
                         rationale = extract_field(outfit_text, "Why it works") or "Suitable for the occasion"
                         
@@ -201,7 +177,7 @@ Be specific and practical in your recommendations."""
                             description=description,
                             top=top,
                             bottom=bottom,
-                            shoes=shoes,
+                            shoes=None,
                             accessories=[],
                             colors=colors,
                             rationale=rationale,
@@ -211,65 +187,9 @@ Be specific and practical in your recommendations."""
                             match_score=85
                         )
                         recommendations.append(rec)
-            
-                # Fetch real clothing images for ALL recommendations
-                logger.info("Fetching clothing images for recommendations...")
-                import asyncio
-                
-                async def fetch_images_for_recommendation(rec):
-                    """Fetch clothing images for a single recommendation."""
-                    try:
-                        images = await self.clothing_image_service.get_outfit_images(
-                            top=rec.top,
-                            bottom=rec.bottom,
-                            shoes=rec.shoes
-                        )
-                        rec.top_image_url = images.get("top_image_url")
-                        rec.bottom_image_url = images.get("bottom_image_url")
-                        rec.shoes_image_url = images.get("shoes_image_url")
-                        logger.info(f"Fetched images for: {rec.outfit_name}")
-                    except Exception as e:
-                        logger.warning(f"Failed to fetch images for {rec.outfit_name}: {e}")
-                
-                # Fetch images for all recommendations concurrently
-                if recommendations:
-                    await asyncio.gather(*[fetch_images_for_recommendation(rec) for rec in recommendations])
 
-                # Generate outfit visualizations using img2img if cloudflare service is available
-                generated_avatars = []
-                if self.cloudflare_diffusion and recommendations:
-                    logger.info("Generating outfit visualizations on the person...")
-                    
-                    async def generate_outfit_for_recommendation(rec, idx):
-                        """Generate outfit visualization for a single recommendation."""
-                        try:
-                            # Build complete outfit description from recommendation
-                            outfit_desc = f"{rec.top}, {rec.bottom}, {rec.shoes}"
-                            if rec.accessories:
-                                outfit_desc += f", {', '.join(rec.accessories)}"
-                            
-                            # Generate image of person wearing this new outfit
-                            result_image_base64 = await self.cloudflare_diffusion.generate_outfit_on_person(
-                                original_image_base64=image,
-                                outfit_description=outfit_desc,
-                                body_attributes=user_physical_attributes
-                            )
-                            
-                            avatar_data = {
-                                "outfit_name": rec.outfit_name,
-                                "outfit_index": idx + 1,
-                                "image": f"data:image/png;base64,{result_image_base64}",
-                                "description": outfit_desc
-                            }
-                            generated_avatars.append(avatar_data)
-                            logger.info(f"Generated outfit visualization {idx + 1}: {rec.outfit_name}")
-                            
-                        except Exception as e:
-                            logger.warning(f"Failed to generate outfit visualization for {rec.outfit_name}: {e}")
-                    
-                    # Generate outfit visualizations for all recommendations concurrently
-                    await asyncio.gather(*[generate_outfit_for_recommendation(rec, idx) for idx, rec in enumerate(recommendations)])
-                    logger.info(f"Successfully generated {len(generated_avatars)} outfit visualizations")
+                if recommendations and self.clothing_image_service:
+                    recommendations = await self._attach_clothing_images(recommendations)
 
             # Build response
             processing_time = time.time() - total_start
@@ -304,7 +224,7 @@ Be specific and practical in your recommendations."""
                 occasion=occasion,
                 style=style,
                 processing_time=time.time() - total_start,
-                used_api="OLLAMA+GEMMA3",
+                used_api="GROQ+LLAMA4",
                 avatar_url=None,
                 is_appropriate=False,
                 critique=f"Error during analysis: {str(e)}",
@@ -335,7 +255,10 @@ Required JSON structure (ALL fields are mandatory):
 
 Return ONLY the JSON object, nothing else."""
             
-            analysis_json_str = await self.openrouter_service.get_image_description(image, analysis_prompt)
+            if self.openrouter_service:
+                analysis_json_str = await self.openrouter_service.get_image_description(image, analysis_prompt)
+            else:
+                analysis_json_str = await self.groq_service.analyze_image(image, analysis_prompt)
             
             # Log raw response for debugging
             logger.info(f"Raw quick analysis response (first 300 chars): {analysis_json_str[:300]}")
@@ -356,9 +279,33 @@ Return ONLY the JSON object, nothing else."""
                 "recommended_colors": analysis.get("recommended_colors", []),
                 "flattering_styles": analysis.get("flattering_styles", []),
                 "processing_time": time.time() - start_time,
-                "used_api": "openrouter"
+                "used_api": "openrouter" if self.openrouter_service else "groq"
             }
             
         except Exception as e:
             logger.error(f"Error in quick analysis: {str(e)}")
             raise
+
+    async def _attach_clothing_images(
+        self,
+        recommendations: list[OutfitRecommendation],
+    ) -> list[OutfitRecommendation]:
+        enriched = []
+
+        for rec in recommendations:
+            try:
+                images = await self.clothing_image_service.get_outfit_images(
+                    top=rec.top,
+                    bottom=rec.bottom,
+                    shoes=rec.shoes or "",
+                    accessories=rec.accessories,
+                )
+                rec.top_image_url = images.get("top_image_url")
+                rec.bottom_image_url = images.get("bottom_image_url")
+                rec.shoes_image_url = images.get("shoes_image_url")
+            except Exception as image_error:
+                logger.warning(f"Failed to enrich clothing images for '{rec.outfit_name}': {image_error}")
+
+            enriched.append(rec)
+
+        return enriched

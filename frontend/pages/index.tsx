@@ -1,323 +1,208 @@
-import { useState, useRef } from 'react'
+import { useRef } from 'react'
 import Head from 'next/head'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
-import ImageUpload from '../components/ImageUpload'
-import RecommendationResults from '../components/RecommendationResults'
-import Header from '../components/layout/Header'
-import Footer from '../components/layout/Footer'
+import GlassCube from '../components/GlassCube'
+import CameraReelPlaceholder from '../components/CameraReelPlaceholder'
 
 export default function Home() {
-  const [recommendations, setRecommendations] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [occasion, setOccasion] = useState('casual')
-  const [style, setStyle] = useState('minimalist')
-  const uploadRef = useRef<HTMLDivElement>(null)
+  const manifestoRef = useRef<HTMLElement>(null)
+  const intelligenceRef = useRef<HTMLElement>(null)
+  const syndicateRef = useRef<HTMLElement>(null)
+  const canvasRef = useRef<HTMLDivElement>(null)
 
-  const handleRecommendations = (data: any) => {
-    setRecommendations(data)
-    // Scroll to results
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+  const scrollTo = (section: 'manifesto' | 'intelligence' | 'syndicate') => {
+    if (section === 'manifesto') manifestoRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (section === 'intelligence') intelligenceRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (section === 'syndicate') syndicateRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const handleReset = () => {
-    setRecommendations(null)
-  }
-
-  const scrollToUpload = () => {
-    uploadRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  const handleNavigate = (section: string) => {
-    if (section === 'upload') {
-      if (recommendations) {
-        handleReset()
-      }
-      setTimeout(() => scrollToUpload(), 100)
-    } else if (section === 'home') {
-      handleReset()
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+  const dossierCards = [
+    {
+      id: '091',
+      title: 'Ghostly Textures',
+      image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=80'
+    },
+    {
+      id: '092',
+      title: 'Void Aesthetics',
+      image: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1200&q=80'
+    },
+    {
+      id: '093',
+      title: 'Lunar Minimalism',
+      image: 'https://images.unsplash.com/photo-1485230895905-ec40ba36b9bc?auto=format&fit=crop&w=1200&q=80'
     }
+  ]
+
+  const handleNav = (section: 'manifesto' | 'intelligence' | 'syndicate') => {
+    scrollTo(section)
+  }
+
+  const handleCanvasMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+    canvasRef.current?.style.setProperty('--mx', `${x}px`)
+    canvasRef.current?.style.setProperty('--my', `${y}px`)
+  }
+
+  const resetCanvasGlow = () => {
+    canvasRef.current?.style.setProperty('--mx', '50%')
+    canvasRef.current?.style.setProperty('--my', '35%')
   }
 
   return (
     <>
       <Head>
-        <title>ATRIQUET - Style Journal</title>
-        <meta name="description" content="Your personal AI-powered style canvas. Upload your photo to begin your curated fashion journey." />
+        <title>ATRIQUET | Style Intelligence Atelier</title>
+        <meta name="description" content="Algorithmic style intelligence in a brutalist editorial interface." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
-      <div className="min-h-screen bg-nexus-cream">
-        {/* Header */}
-        <Header onNavigate={handleNavigate} />
-
-        {recommendations ? (
-          /* ── RESULTS VIEW ── */
-          <main className="min-h-screen">
-            <div className="max-w-7xl mx-auto px-6 md:px-12 py-12">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-              >
-                <RecommendationResults
-                  data={recommendations}
-                  onReset={handleReset}
-                />
-              </motion.div>
+      <div
+        ref={canvasRef}
+        className="interactive-canvas min-h-screen text-white"
+        onMouseMove={handleCanvasMove}
+        onMouseLeave={resetCanvasGlow}
+      >
+        <nav className="fixed top-0 left-0 z-50 w-full border-b border-white/20 bg-black/45 backdrop-blur-md">
+          <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-5 md:px-12">
+            <button
+              onClick={() => handleNav('manifesto')}
+              className="font-mono text-[10px] uppercase tracking-[0.34em]"
+            >
+              ATRIQUET // 0.0
+            </button>
+            <div className="flex items-center gap-4 md:gap-10 font-mono text-[10px] uppercase tracking-[0.3em]">
+              <Link href="/homepage" className="hover:text-[#ff0000]">Homepage</Link>
+              <button onClick={() => handleNav('intelligence')} className="hover:text-[#ff0000]">Archive</button>
+              <button onClick={() => handleNav('intelligence')} className="hover:text-[#ff0000]">Intelligence</button>
+              <button onClick={() => handleNav('syndicate')} className="hover:text-[#ff0000]">Syndicate</button>
+              <Link href="/vton" className="hover:text-[#ff0000]">VTON</Link>
             </div>
-          </main>
-        ) : (
-          /* ── HOME VIEW ── */
-          <main>
-            {/* ── HERO SECTION ── */}
-            <section className="relative w-full h-[600px] md:h-[700px] overflow-hidden hero-section">
-              {/* Background Image */}
-              <img
-                alt="Fashion style"
-                className="absolute inset-0 w-full h-full object-cover object-top"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAb8rH6aU56zHEXkiGL8QAKsK7oLuqHGnUZnsK2JGbYLGg8EouKD7ou0ZPMFsjCuXFpW9_bE-dDre4rmw9S-QJXj26_PjbGgRZ2M6iwm9NjXsUaAhzGRIQLEsAG99hbQ2z8So-u9htvpp-nAOOf0-ZhnxKxBuH1pMWb8nnMq2k2og5R-OgWlurbatLAIqRELOKilbT2BX9_zqdQPpgujr4_7NA0VAOxf1myweapcbgnV6bMVveRXQvrYhLBnIoJ7DYuqqQTsy5PCKwG"
-              />
-              {/* Gradient Overlay */}
-              <div className="absolute inset-0 bg-black/20 pointer-events-none"></div>
+          </div>
+        </nav>
 
-              {/* Content */}
-              <div className="relative z-10 h-full max-w-7xl mx-auto px-6 md:px-12 flex flex-col justify-center">
-                <div className="max-w-lg text-white">
-                  <motion.h2
-                    initial={{ opacity: 0, y: 30 }}
+        <main className="relative z-[1] pt-20">
+          <section ref={manifestoRef} className="atelier-grid relative min-h-screen overflow-hidden border-b border-white/20 px-6 py-10 md:px-12">
+              <div className="mx-auto grid h-full max-w-[1600px] grid-cols-1 gap-8 lg:grid-cols-12">
+                <div className="col-span-12 flex flex-col justify-center lg:col-span-8">
+                  <motion.h1
+                    initial={{ opacity: 0, y: 28 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8 }}
-                    className="font-serif text-5xl md:text-6xl leading-tight mb-6"
+                    className="font-display text-[min(24vw,180px)] italic leading-[0.83]"
                   >
-                    YOUR PERSONAL<br />STYLE CANVAS
-                  </motion.h2>
+                    ATRIQUET
+                  </motion.h1>
                   <motion.p
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.2 }}
-                    className="text-base md:text-lg font-light mb-8 leading-relaxed opacity-90 max-w-md"
+                    transition={{ duration: 0.8, delay: 0.15 }}
+                    className="mt-8 max-w-xl font-mono text-[10px] uppercase leading-6 tracking-[0.28em] text-white/70 md:text-xs"
                   >
-                    Upload your photo to begin your curated fashion journey. Our AI crafts your unique style story.
+                    Algorithmic style intelligence for luxury buyers and creative directors. No fluff. No trend theater. Only raw, uncompromising signal.
                   </motion.p>
-                  <motion.button
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.4 }}
-                    onClick={scrollToUpload}
-                    className="bg-[#A06448] hover:bg-[#8c563e] text-white text-xs font-bold tracking-widest uppercase px-8 py-4 rounded-sm transition duration-300"
-                  >
-                    UPLOAD PHOTO
-                  </motion.button>
                 </div>
-              </div>
-            </section>
-
-            {/* ── UPLOAD SECTION ── */}
-            <section ref={uploadRef} className="max-w-7xl mx-auto px-6 md:px-12 py-16 md:py-24">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                {/* Left: Text */}
-                <div className="pr-0 lg:pr-12">
-                  <span className="block text-xs font-bold tracking-widest text-nexus-gray mb-4 uppercase">
-                    Style AI
-                  </span>
-                  <h3 className="font-serif text-4xl md:text-5xl text-nexus-text mb-6 leading-tight">
-                    Discover Your<br />Perfect Look
-                  </h3>
-                  <p className="text-nexus-gray text-lg leading-relaxed mb-8">
-                    Upload a photo of your current outfit and our AI will analyze your style, provide expert feedback, and recommend new looks — complete with visualizations of you wearing each outfit.
-                  </p>
-
-                  {/* Occasion & Style Selectors */}
-                  <div className="space-y-4 mb-6">
-                    <div>
-                      <label className="block text-xs font-bold tracking-widest text-nexus-gray mb-2 uppercase">
-                        Occasion
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {['casual', 'formal', 'business', 'party', 'wedding'].map((occ) => (
-                          <button
-                            key={occ}
-                            onClick={() => setOccasion(occ)}
-                            className={`px-4 py-2 rounded-sm text-xs font-bold tracking-wider uppercase transition-all duration-300 ${
-                              occasion === occ
-                                ? 'bg-nexus-brown text-white'
-                                : 'bg-nexus-beige/50 text-nexus-text hover:bg-nexus-beige'
-                            }`}
-                          >
-                            {occ}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold tracking-widest text-nexus-gray mb-2 uppercase">
-                        Style
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {['minimalist', 'classic', 'trendy', 'bohemian', 'streetwear'].map((st) => (
-                          <button
-                            key={st}
-                            onClick={() => setStyle(st)}
-                            className={`px-4 py-2 rounded-sm text-xs font-bold tracking-wider uppercase transition-all duration-300 ${
-                              style === st
-                                ? 'bg-nexus-brown text-white'
-                                : 'bg-nexus-beige/50 text-nexus-text hover:bg-nexus-beige'
-                            }`}
-                          >
-                            {st}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right: Upload Component */}
-                <div className="h-auto rounded-xl overflow-hidden">
-                  <ImageUpload
-                    onRecommendations={handleRecommendations}
-                    loading={loading}
-                    setLoading={setLoading}
-                    occasion={occasion}
-                    style={style}
-                  />
-                </div>
-              </div>
-            </section>
-
-            {/* ── LATEST LOOKS (Placeholder Showcase) ── */}
-            <section className="max-w-7xl mx-auto px-6 md:px-12 py-16 md:py-24">
-              {/* Section Header */}
-              <div className="flex justify-between items-end mb-8">
-                <h3 className="font-serif text-2xl md:text-3xl uppercase tracking-wide text-nexus-text">
-                  STYLE STORIES
-                </h3>
-                <div className="flex gap-4">
-                  <button className="text-nexus-gray hover:text-nexus-text transition">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                      <path d="M15.75 19.5L8.25 12l7.5-7.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </button>
-                  <button className="text-nexus-text hover:text-nexus-brown transition">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                      <path d="M8.25 4.5l7.5 7.5-7.5 7.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              {/* Grid Layout */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                {/* Card 1 */}
-                <article className="group cursor-pointer" onClick={scrollToUpload}>
-                  <div className="overflow-hidden rounded-md mb-3 aspect-[3/4]">
-                    <img
-                      alt="Business Redefined"
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuDE5wGGD9AWeNGjEzPCtrt8bUXhmsmIB2k1PNRfVVnwXLOaQ7xPtxDij4tNN3T05pnuID2e67V43jbDOBQWOHaE-gZqrp0CSe33OYGYDKAowS8A_0txv_jJjemLnPwZACH6jDZ6pIH67Soc5F46XEeXTSvPjvUonWHxo2GTlURlY33a66KzNTY1WybRDx-w5ZR7UAzNHxqZtWQljx5btoadEpsrssN4xTzDiq1EflAa3Y-yYWKSzudUyuEGP0nZNMmwVCEhzfSlOVUm"
-                    />
-                  </div>
-                  <p className="text-sm font-medium text-nexus-text">Business Casual Redefined</p>
-                </article>
-
-                {/* Card 2 */}
-                <article className="group cursor-pointer" onClick={scrollToUpload}>
-                  <div className="overflow-hidden rounded-md mb-3 aspect-[3/4]">
-                    <img
-                      alt="Evening Gown"
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuALn_TM5J06am7wFzwaxNxBUs5EpHvNNYXYXV_uQbVmVNMLBxakocfjrBTqKOdDyir5yEasaXZigGVQsZHt0ALHPbzwbDf2FEsOW_rSFDd4REKeub9x6sMDiR6UfoCMIBFz1Fwp2D28tOuO0vPevcQbm68gQxsacTnYqkDeIppv0qPh91wQ8pRg5SzcslNlWgO_5ip7qrBARSQvIhRAqO0jGwdV_JDEs9rWLCaRddpO6NzpRWDkss9FooExPRLVNlvZHpLFm5eAplyL"
-                    />
-                  </div>
-                  <p className="text-sm font-medium text-nexus-text">Evening Elegance</p>
-                </article>
-
-                {/* Card 3 */}
-                <article className="group cursor-pointer" onClick={scrollToUpload}>
-                  <div className="overflow-hidden rounded-md mb-3 aspect-[3/4]">
-                    <img
-                      alt="Weekend Casual"
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_7NsxJpsSQeKSluUuAtAdXpWq17UGD5fgetbNA6m7OGFsTsBvKavl0zWmEoBFx_mFazOrY_j100eFFEbS6xAePaoaZs240TH3J9YfKTUlxJwwvl5PkzSAPTkK4W1ptOd43_hqcgg-KoxZDYGyEn95Bf4sV0WlB3162ekMkZbs_fnq8RVMI6dZwFNaU2fUb57-4jaa9ksLWcj1MqK0kZxcuQnHgGfJA8v8fGjCAr4_CGkHHEPlYvaVH27gKuN7SKVBvMJW47pb_V8W"
-                    />
-                  </div>
-                  <p className="text-sm font-medium text-nexus-text">Weekend Redefined</p>
-                </article>
-              </div>
-            </section>
-
-            {/* ── STYLE STORY: Business ── */}
-            <section className="max-w-7xl mx-auto px-6 md:px-12 pb-16 md:pb-24">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                {/* Text Content */}
-                <div className="order-2 lg:order-1 pr-0 lg:pr-12">
-                  <span className="block text-xs font-bold tracking-widest text-nexus-gray mb-4 uppercase">
-                    Style Story
-                  </span>
-                  <h3 className="font-serif text-4xl md:text-5xl text-nexus-text mb-6 leading-tight">
-                    Business Casual Redefined
-                  </h3>
-                  <p className="text-nexus-gray text-lg leading-relaxed mb-8">
-                    Elevate your workday with warm earth tones and relaxed tailoring. Perfect for the modern professional.
-                  </p>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.3 }}
+                  className="col-span-12 flex items-end justify-start lg:col-span-4 lg:justify-end"
+                >
                   <button
-                    onClick={scrollToUpload}
-                    className="bg-[#A06448] hover:bg-[#8c563e] text-white text-xs font-bold tracking-widest uppercase px-8 py-4 rounded-sm transition duration-300"
+                    onClick={() => scrollTo('intelligence')}
+                    className="brutal-btn h-20 w-full max-w-[320px] font-heading text-xs uppercase tracking-[0.3em] md:w-[320px]"
                   >
-                    TRY THIS STYLE
+                    Enter The Archive
                   </button>
-                </div>
-
-                {/* Image Content */}
-                <div className="order-1 lg:order-2 h-[500px] lg:h-[600px] rounded-xl overflow-hidden shadow-lg">
-                  <img
-                    alt="Business Casual Style"
-                    className="w-full h-full object-cover object-center"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXXeIcuehBc5BPOZqSFF6kGuuF5yaMweEfdTTt4gy5lqkj34Bz7H8zURddkY-JB5LFKW9HjguBXz5DRnYpUVChUrRzH6xPtupDad-zA6oNDiKnNne_AtMh3o5KV83NWFWywNzTNSGjg1KoWZBZq31TQOZenO-BGeMMXaGbVHn8RLB19xHZwI15BU1nM_9jcMb1ox_O_t_tSaUT1AxXF3RBiNUTH7cmMvdOVISBfOp6E7d3ckjo-11Mzk9pj3Uy8XM_Vcw01QxcMs1Y"
-                  />
-                </div>
+                </motion.div>
               </div>
-            </section>
 
-            {/* ── STYLE STORY: Evening Gala ── */}
-            <section className="max-w-7xl mx-auto px-6 md:px-12 pb-16 md:pb-24">
-              <div className="bg-[#3E332B] rounded-xl overflow-hidden shadow-2xl flex flex-col lg:flex-row w-full">
-                {/* Image Column */}
-                <div
-                  className="w-full lg:w-1/2 min-h-[400px] lg:min-h-[500px] bg-cover bg-center"
-                  style={{
-                    backgroundImage: 'url(https://lh3.googleusercontent.com/aida-public/AB6AXuB_oD71R4Tor8Xlyk2K4N0aCFfFaYRmYQqq3qElaRPBINx1fY60qyYoB1Wgdc0R2SetNcZH6xnVEL8vH9J4gHITvgk0yMxkHEjcv3PlP2kt75B4mrIzSaC1Cv1bHWUglW8m-AUvvop3X4bocc2NK3TtUSMOkXimlAeM0swWTCGBSbDLoIqYE50_DQcFi3YlMH9HpboK4AHNtjVRHH1S6gidonw4z59moSnIGU0twJsjHgoTov6tmAJjiAqx49bS4A_SOGCYpwGsn147)'
-                  }}
-                />
+              <motion.div
+                initial={{ opacity: 0, y: 28 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.35 }}
+                className="mx-auto mt-10 w-full max-w-[1600px] lg:mt-14"
+              >
+                <CameraReelPlaceholder />
+              </motion.div>
 
-                {/* Text Column */}
-                <div className="w-full lg:w-1/2 flex flex-col justify-center p-8 md:p-12 lg:p-16 text-left">
-                  <span className="block text-xs font-bold tracking-widest text-white/70 mb-4 uppercase">
-                    Style Story
-                  </span>
-                  <h3 className="font-serif text-3xl md:text-4xl lg:text-5xl text-white mb-6 leading-tight">
-                    Evening Gala Elegance
-                  </h3>
-                  <p className="text-white/90 text-lg leading-relaxed mb-8">
-                    Step into the spotlight with breathtaking silhouettes and rich textures. Our curated evening collection ensures you shine at every occasion with timeless grace and cinematic flair.
-                  </p>
-                  <div>
-                    <button
-                      onClick={scrollToUpload}
-                      className="bg-[#A6684F] hover:bg-[#8c563e] text-white text-xs font-bold tracking-widest uppercase px-8 py-4 rounded-sm transition duration-300"
+              <div className="absolute bottom-8 left-6 hidden items-end gap-4 md:flex md:left-12">
+                <div className="h-28 w-px bg-white/60" />
+                <span className="font-mono text-[10px] uppercase tracking-[0.26em] text-white/80 [writing-mode:vertical-rl]">
+                  Coordinates: 48.8566 N, 2.3522 E
+                </span>
+              </div>
+          </section>
+
+          <section ref={intelligenceRef} className="border-b border-white/20 px-6 py-20 md:px-12">
+              <div className="mx-auto max-w-[1600px]">
+                <div className="mb-12 flex items-end justify-between border-b border-white/20 pb-5">
+                  <h2 className="font-heading text-3xl uppercase tracking-[0.1em] md:text-5xl">The Intelligence</h2>
+                  <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/80">[01] Archive</span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+                  {dossierCards.map((card, index) => (
+                    <motion.article
+                      key={card.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true, amount: 0.2 }}
+                      transition={{ duration: 0.5, delay: index * 0.1 }}
+                      className="group relative h-[560px] cursor-pointer overflow-hidden border border-white/30"
                     >
-                      TRY THIS STYLE
-                    </button>
-                  </div>
+                      <img
+                        alt={card.title}
+                        src={card.image}
+                        className="h-full w-full object-cover grayscale transition-none group-hover:grayscale-0"
+                      />
+                      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/0" />
+                      <div className="absolute left-6 top-6 z-10 font-mono text-[10px] uppercase tracking-[0.26em] text-white mix-blend-difference">
+                        [ Report {card.id} ]
+                      </div>
+                      <h3 className="absolute bottom-16 left-6 z-10 bg-white px-3 py-2 font-display text-4xl italic leading-tight text-black group-hover:bg-black group-hover:text-white md:text-5xl">
+                        {card.title}
+                      </h3>
+                      <div className="absolute bottom-6 left-6 right-6 z-10 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.26em] text-white mix-blend-difference">
+                        <span>Archive // 2026</span>
+                        <span>Open Dossier</span>
+                      </div>
+                    </motion.article>
+                  ))}
                 </div>
               </div>
-            </section>
-          </main>
-        )}
+          </section>
 
-        {/* Footer */}
-        <Footer />
+          <section ref={syndicateRef} className="px-6 py-20 md:px-12 md:py-24 flex flex-col items-center">
+              <div className="text-center mb-6">
+                <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-[#00E5FF]">The Syndicate</p>
+                <h2 className="mt-4 font-display text-5xl italic leading-[0.9] md:text-7xl">Application For Clearance</h2>
+                <p className="mt-6 max-w-lg mx-auto font-mono text-[10px] uppercase tracking-widest leading-relaxed text-white/50">
+                  Submit your profile for algorithmic curation. This gate remains narrow by design.
+                </p>
+              </div>
+              
+              {/* Glass Cube Monolith replaces the legacy form and controls its own flow natively */}
+              <GlassCube />
+          </section>
+
+        </main>
+
+        <div className="ticker-wrap fixed bottom-0 left-0 z-50 w-full border-t border-white/20 bg-black/70">
+          <div className="ticker-track py-2 font-mono text-[10px] uppercase tracking-[0.27em] text-white/80">
+            <span>Trend Velocity: +14.2%</span>
+            <span>Current Sector: Neo-Monolith</span>
+            <span>Atmospheric Density: 0.003kg/m3</span>
+            <span>Signal Strength: Nominal</span>
+            <span>Trend Velocity: +14.2%</span>
+            <span>Current Sector: Neo-Monolith</span>
+            <span>Atmospheric Density: 0.003kg/m3</span>
+            <span>Signal Strength: Nominal</span>
+          </div>
+        </div>
       </div>
     </>
   )
