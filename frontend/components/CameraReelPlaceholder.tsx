@@ -4,14 +4,14 @@ type ReelImage = {
 }
 
 const REEL_IMAGES: ReelImage[] = [
-  { src: '/assets/fashion-reel/look-1.jpg', title: 'Monochrome Tailoring' },
-  { src: '/assets/fashion-reel/look-2.jpg', title: 'Street Atelier Layering' },
-  { src: '/assets/fashion-reel/look-3.jpg', title: 'Luxe Night Editorial' },
-  { src: '/assets/fashion-reel/look-4.jpg', title: 'Paris Runway Pulse' },
-  { src: '/assets/fashion-reel/look-5.jpg', title: 'Structured Silhouette Study' },
-  { src: '/assets/fashion-reel/look-6.jpg', title: 'High Contrast Utility' },
-  { src: '/assets/fashion-reel/look-7.jpg', title: 'Modern Couture Motion' },
-  { src: '/assets/fashion-reel/look-8.jpg', title: 'Heritage x Future Blend' }
+  { src: '/images/look-1.jpg', title: 'Monochrome Tailoring' },
+  { src: '/images/look-2.jpg', title: 'Street Atelier Layering' },
+  { src: '/images/look-3.jpg', title: 'Luxe Night Editorial' },
+  { src: '/images/look-4.jpg', title: 'Paris Runway Pulse' },
+  { src: '/images/look-5.jpg', title: 'Structured Silhouette Study' },
+  { src: '/images/look-6.jpg', title: 'High Contrast Utility' },
+  { src: '/images/look-7.jpg', title: 'Modern Couture Motion' },
+  { src: '/images/look-8.jpg', title: 'Heritage x Future Blend' }
 ]
 
 export default function CameraReelPlaceholder() {
