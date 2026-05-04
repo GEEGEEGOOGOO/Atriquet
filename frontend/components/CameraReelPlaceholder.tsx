@@ -14,8 +14,6 @@ const REEL_IMAGES: ReelImage[] = [
   { src: '/assets/fashion-reel/look-8.jpg', title: 'Heritage x Future Blend' }
 ]
 
-const LOOP_IMAGES = [...REEL_IMAGES, ...REEL_IMAGES]
-
 export default function CameraReelPlaceholder() {
   return (
     <section className="camera-reel-placeholder" aria-label="Moving fashion camera reel showcase">
@@ -25,12 +23,16 @@ export default function CameraReelPlaceholder() {
       </div>
 
       <div className="camera-reel-window">
-        <div className="camera-reel-track">
-          {LOOP_IMAGES.map((image, index) => (
-            <figure className="camera-frame" key={`${image.src}-${index}`}>
-              <img className="camera-frame-image" src={image.src} alt={image.title} loading="lazy" />
-              <figcaption className="camera-frame-caption">{image.title}</figcaption>
-            </figure>
+        <div className="camera-reel-track" aria-hidden="true">
+          {[0, 1].map((copyIndex) => (
+            <div className="camera-reel-strip" key={copyIndex}>
+              {REEL_IMAGES.map((image) => (
+                <figure className="camera-frame" key={`${copyIndex}-${image.src}`}>
+                  <img className="camera-frame-image" src={image.src} alt={image.title} loading="lazy" />
+                  <figcaption className="camera-frame-caption">{image.title}</figcaption>
+                </figure>
+              ))}
+            </div>
           ))}
         </div>
       </div>
@@ -42,7 +44,7 @@ export default function CameraReelPlaceholder() {
           border: 1px solid rgba(255, 255, 255, 0.22);
           background:
             linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01)),
-            linear-gradient(110deg, rgba(0, 229, 255, 0.08), rgba(0, 0, 0, 0.2));
+            linear-gradient(110deg, rgba(34, 211, 238, 0.1), rgba(15, 20, 31, 0.42));
           box-shadow: 0 26px 70px rgba(0, 0, 0, 0.56);
         }
 
@@ -84,7 +86,7 @@ export default function CameraReelPlaceholder() {
           text-transform: uppercase;
           letter-spacing: 0.22em;
           font-size: 0.7rem;
-          color: rgba(255, 255, 255, 0.95);
+          color: rgba(248, 250, 252, 0.96);
         }
 
         .camera-reel-meta {
@@ -92,7 +94,7 @@ export default function CameraReelPlaceholder() {
           text-transform: uppercase;
           letter-spacing: 0.17em;
           font-size: 0.58rem;
-          color: rgba(255, 255, 255, 0.62);
+          color: rgba(248, 250, 252, 0.64);
         }
 
         .camera-reel-window {
@@ -104,11 +106,17 @@ export default function CameraReelPlaceholder() {
         .camera-reel-track {
           display: flex;
           align-items: stretch;
-          gap: 1rem;
           width: max-content;
-          padding: 0 1rem;
           will-change: transform;
           animation: camera-reel-scroll 34s linear infinite;
+        }
+
+        .camera-reel-strip {
+          display: flex;
+          align-items: stretch;
+          gap: 1rem;
+          flex: none;
+          padding: 0 0.5rem;
         }
 
         .camera-frame {
@@ -141,7 +149,7 @@ export default function CameraReelPlaceholder() {
             transform: translate3d(0, 0, 0);
           }
           100% {
-            transform: translate3d(-50%, 0, 0);
+            transform: translate3d(calc(-50% - 0.5rem), 0, 0);
           }
         }
 

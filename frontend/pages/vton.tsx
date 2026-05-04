@@ -197,48 +197,48 @@ export default function VTONPage() {
         onMouseMove={handleCanvasMove}
         onMouseLeave={resetCanvasGlow}
       >
-        <nav className="fixed top-0 left-0 z-50 w-full border-b border-white/20 bg-black/45 backdrop-blur-md">
+        <nav className="site-nav-shell fixed top-0 left-0 z-50 w-full">
           <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-5 md:px-12">
-            <Link href="/" className="font-mono text-[10px] uppercase tracking-[0.34em]">ATRIQUET // 0.0</Link>
+            <Link href="/" className="site-nav-link font-mono text-[10px] uppercase tracking-[0.34em]">ATRIQUET // 0.0</Link>
             <div className="flex items-center gap-4 md:gap-10 font-mono text-[10px] uppercase tracking-[0.3em]">
-              <Link href="/" className="hover:text-[#ff0000]">Manifesto</Link>
-              <span className="text-white/70">VTON LAB</span>
+              <Link href="/" className="site-nav-link">Manifesto</Link>
+              <span className="text-white/84">VTON LAB</span>
             </div>
           </div>
         </nav>
 
         <main className="relative z-[1] px-6 pb-24 pt-28 md:px-12">
-          <section className="mx-auto max-w-[1600px] border border-white/20">
+          <section className="border-panel mx-auto max-w-[1600px]">
             <div className="grid grid-cols-1 lg:grid-cols-2">
-              <div className="bg-black p-8 md:p-14">
-                <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/70">The VTON Dossier</p>
+              <div className="bg-[#0b1323]/80 p-8 md:p-14">
+                <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-cyan-300/85">The VTON Dossier</p>
                 <h1 className="mt-6 font-display text-5xl italic leading-[0.9] md:text-7xl">Virtual Try-On Clearance</h1>
                 <p className="mt-8 max-w-md font-body text-base leading-relaxed text-white/80">
                   Submit one portrait and one outfit directive. The lab keeps identity, pose, and frame while replacing garment composition.
                 </p>
-                <div className="mt-12 h-px w-44 bg-white/30" />
+                <div className="mt-12 h-px w-44 bg-gradient-to-r from-cyan-300/70 to-orange-400/80" />
                 {preview && (
-                  <div className="mt-10 border border-white/20 p-4">
+                  <div className="mt-10 border border-white/20 bg-white/5 p-4">
                     <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.22em] text-white/70">Source Portrait</p>
                     <img src={preview} alt="Source" className="h-[360px] w-full object-cover" />
                   </div>
                 )}
                 {garmentPreview && (
-                  <div className="mt-6 border border-white/20 p-4">
+                  <div className="mt-6 border border-white/20 bg-white/5 p-4">
                     <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.22em] text-white/70">Garment Reference</p>
                     <img src={garmentPreview} alt="Garment" className="h-[360px] w-full object-cover" />
                   </div>
                 )}
               </div>
 
-              <div className="bg-white p-8 text-black md:p-14">
+              <div className="bg-white p-8 text-slate-900 md:p-14">
                 <div className="space-y-7">
                   <div>
                     <label className="mb-3 block font-mono text-[10px] uppercase tracking-[0.25em]">Upload Person Image</label>
                     <div
                       {...getPersonRootProps()}
-                      className={`cursor-pointer border border-black p-8 text-center transition ${
-                        isPersonDragActive ? 'bg-black text-white' : 'bg-white text-black'
+                      className={`cursor-pointer border border-slate-900 p-8 text-center transition-colors duration-200 ${
+                        isPersonDragActive ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'
                       }`}
                     >
                       <input {...getPersonInputProps()} />
@@ -253,8 +253,8 @@ export default function VTONPage() {
                     <label className="mb-3 block font-mono text-[10px] uppercase tracking-[0.25em]">Upload Garment Image</label>
                     <div
                       {...getGarmentRootProps()}
-                      className={`cursor-pointer border border-black p-8 text-center transition ${
-                        isGarmentDragActive ? 'bg-black text-white' : 'bg-white text-black'
+                      className={`cursor-pointer border border-slate-900 p-8 text-center transition-colors duration-200 ${
+                        isGarmentDragActive ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'
                       }`}
                     >
                       <input {...getGarmentInputProps()} />
@@ -271,7 +271,7 @@ export default function VTONPage() {
                       value={outfitDescription}
                       onChange={(e) => setOutfitDescription(e.target.value)}
                       rows={5}
-                      className="w-full border border-black p-4 font-body text-sm leading-relaxed outline-none focus:bg-black focus:text-white"
+                      className="w-full border border-slate-900 p-4 font-body text-sm leading-relaxed outline-none transition-colors duration-200 focus:bg-slate-900 focus:text-white"
                     />
                   </div>
 
@@ -281,7 +281,7 @@ export default function VTONPage() {
                       <input
                         value={bodyType}
                         onChange={(e) => setBodyType(e.target.value)}
-                        className="w-full border border-black p-3 font-body text-sm outline-none focus:bg-black focus:text-white"
+                        className="w-full border border-slate-900 p-3 font-body text-sm outline-none transition-colors duration-200 focus:bg-slate-900 focus:text-white"
                       />
                     </div>
                     <div>
@@ -289,7 +289,7 @@ export default function VTONPage() {
                       <input
                         value={skinTone}
                         onChange={(e) => setSkinTone(e.target.value)}
-                        className="w-full border border-black p-3 font-body text-sm outline-none focus:bg-black focus:text-white"
+                        className="w-full border border-slate-900 p-3 font-body text-sm outline-none transition-colors duration-200 focus:bg-slate-900 focus:text-white"
                       />
                     </div>
                     <div>
@@ -297,7 +297,7 @@ export default function VTONPage() {
                       <input
                         value={gender}
                         onChange={(e) => setGender(e.target.value)}
-                        className="w-full border border-black p-3 font-body text-sm outline-none focus:bg-black focus:text-white"
+                        className="w-full border border-slate-900 p-3 font-body text-sm outline-none transition-colors duration-200 focus:bg-slate-900 focus:text-white"
                       />
                     </div>
                   </div>
@@ -305,7 +305,7 @@ export default function VTONPage() {
                   <button
                     onClick={handleSubmit}
                     disabled={loading}
-                    className="w-full border border-black bg-black px-8 py-5 font-heading text-xs uppercase tracking-[0.3em] text-white transition hover:bg-[#ff0000] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-full border border-slate-900 bg-slate-900 px-8 py-5 font-heading text-xs uppercase tracking-[0.3em] text-white transition-colors duration-200 hover:bg-orange-500 hover:border-orange-500 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {loading ? 'Rendering VTON...' : 'Generate VTON'}
                   </button>
@@ -337,7 +337,7 @@ export default function VTONPage() {
                     <h2 className="font-heading text-3xl uppercase tracking-[0.12em] md:text-4xl">VTON Result</h2>
                     <button
                       onClick={() => setResultImage(null)}
-                      className="border border-black px-6 py-3 font-mono text-[10px] uppercase tracking-[0.24em] transition hover:bg-black hover:text-white"
+                      className="border border-slate-900 px-6 py-3 font-mono text-[10px] uppercase tracking-[0.24em] transition-colors duration-200 hover:bg-slate-900 hover:text-white"
                     >
                       Close Result
                     </button>

@@ -8,6 +8,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 const W = 500
 const H = 750
 const Z = W / 2
+const MAX_TILT = 2.5
 
 type OutfitRecommendation = {
   outfit_name: string
@@ -376,6 +377,14 @@ export default function GlassCube({ onRecommendations }: { onRecommendations?: (
   const [data, setData] = useState<RecommendationResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [file, setFile] = useState<File | null>(null)
+  const [interaction, setInteraction] = useState({
+    tiltX: 0,
+    tiltY: 0,
+    shiftX: 0,
+    shiftY: 0,
+    glowX: 50,
+    glowY: 48,
+  })
 
   const controls = useAnimation()
   const [isRotating, setIsRotating] = useState(false)
@@ -427,6 +436,34 @@ export default function GlassCube({ onRecommendations }: { onRecommendations?: (
     rotateTo(0)
   }
 
+  const handleSceneMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    const px = (event.clientX - rect.left) / rect.width
+    const py = (event.clientY - rect.top) / rect.height
+    const nx = px * 2 - 1
+    const ny = py * 2 - 1
+
+    setInteraction({
+      tiltX: -(ny * MAX_TILT),
+      tiltY: nx * MAX_TILT,
+      shiftX: nx * 10,
+      shiftY: ny * 8,
+      glowX: px * 100,
+      glowY: py * 100,
+    })
+  }
+
+  const handleSceneLeave = () => {
+    setInteraction({
+      tiltX: 0,
+      tiltY: 0,
+      shiftX: 0,
+      shiftY: 0,
+      glowX: 50,
+      glowY: 48,
+    })
+  }
+
   const faces = [
     <OccasionFace key="f0" occasion={occasion} setOccasion={setOccasion} onNext={() => rotateTo(1)} rotateTo={rotateTo} />,
     <StyleFace key="f1" style={style} setStyle={setStyle} onNext={() => rotateTo(2)} rotateTo={rotateTo} />,
@@ -453,37 +490,96 @@ export default function GlassCube({ onRecommendations }: { onRecommendations?: (
         transition={{ type: 'spring', damping: 20, stiffness: 60 }}
         className="relative flex w-full items-center justify-center"
         style={{ height: 850 }}
+        onMouseMove={handleSceneMove}
+        onMouseLeave={handleSceneLeave}
       >
         <motion.div
-          animate={{ y: [0, -20, 0] }}
-          transition={{ duration: 6, ease: 'easeInOut', repeat: Infinity }}
-          className="relative flex h-full w-full items-center justify-center p-20 pointer-events-none"
+          aria-hidden="true"
+          animate={{
+            y: [0, 10, 0],
+            scaleX: [0.9, 0.82, 0.9],
+            scaleY: [1, 0.92, 1],
+            opacity: [0.48, 0.3, 0.48],
+            x: interaction.shiftX * 0.8,
+          }}
+          transition={{ duration: 4.8, ease: 'easeInOut', repeat: Infinity }}
+          className="pointer-events-none absolute bottom-[8%] h-[108px] w-[500px] rounded-full bg-[rgba(3,8,18,0.82)] blur-[44px]"
+          style={{ zIndex: 0 }}
+        />
+        <motion.div
+          aria-hidden="true"
+          animate={{
+            y: [0, 8, 0],
+            scaleX: [0.74, 0.68, 0.74],
+            opacity: [0.26, 0.14, 0.26],
+            x: interaction.shiftX * 1.4,
+          }}
+          transition={{ duration: 4.8, ease: 'easeInOut', repeat: Infinity }}
+          className="pointer-events-none absolute bottom-[10.5%] h-[56px] w-[340px] rounded-full bg-[rgba(0,229,255,0.28)] blur-[24px]"
+          style={{ zIndex: 1 }}
+        />
+        <motion.div
+          animate={{ y: [0, -14, 0], rotateZ: [-1.8, 0.6, -1.8] }}
+          transition={{ duration: 4.8, ease: 'easeInOut', repeat: Infinity }}
+          className="relative flex h-full w-full items-center justify-center p-20"
         >
           <div
             style={{
               position: 'absolute',
-              bottom: '5%',
-              width: 500,
-              height: 180,
-              background: 'radial-gradient(ellipse at center, rgba(0, 229, 255, 0.2) 0%, transparent 60%)',
-              filter: 'blur(30px)',
-              transform: 'rotateX(75deg)',
+              width: 720,
+              height: 720,
+              left: '50%',
+              top: '50%',
+              transform: `translate(calc(-50% + ${(interaction.glowX - 50) * 0.8}px), calc(-42% + ${(interaction.glowY - 48) * 0.6}px))`,
+              background: 'radial-gradient(circle, rgba(0, 229, 255, 0.12) 0%, transparent 62%)',
+              filter: 'blur(180px)',
               zIndex: 0,
             }}
           />
           <div
             style={{
               position: 'absolute',
-              width: 600,
-              height: 600,
-              background: 'radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 60%)',
-              filter: 'blur(80px)',
+              width: 360,
+              height: 360,
+              left: '56%',
+              top: '68%',
+              transform: `translate(calc(-50% + ${(interaction.glowX - 50) * 0.35}px), calc(-50% + ${(interaction.glowY - 48) * 0.55}px))`,
+              background: 'radial-gradient(circle, rgba(249,115,22,0.1) 0%, transparent 62%)',
+              filter: 'blur(120px)',
               borderRadius: '50%',
+              zIndex: 0,
             }}
           />
 
-          <div style={{ perspective: '2000px', zIndex: 10 }}>
-            <motion.div animate={controls} style={{ width: W, height: H, position: 'relative', transformStyle: 'preserve-3d' }}>
+          <motion.div
+            animate={{
+              rotateX: interaction.tiltX,
+              rotateY: interaction.tiltY,
+              x: interaction.shiftX,
+              y: interaction.shiftY * 0.4,
+            }}
+            transition={{ type: 'spring', stiffness: 90, damping: 16, mass: 0.8 }}
+            style={{ perspective: '2000px', zIndex: 10 }}
+          >
+            <div
+              className="pointer-events-none absolute left-1/2 top-[78px] h-[640px] w-[36px] rounded-[18px] border border-white/10 bg-[rgba(8,14,24,0.42)]"
+              style={{
+                transform: 'translateX(122px)',
+                boxShadow: 'inset 0 0 24px rgba(255,255,255,0.02)',
+              }}
+            />
+            <div
+              className="pointer-events-none absolute left-1/2 top-[52px] h-[664px] w-[468px] rounded-[22px] border border-[rgba(201,237,250,0.12)] bg-[rgba(7,12,22,0.2)]"
+              style={{
+                transform: 'translateX(-112px) rotate(1.4deg)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+              }}
+            />
+            <motion.div
+              animate={controls}
+              style={{ width: W, height: H, position: 'relative', transformStyle: 'preserve-3d' }}
+            >
               {faces.map((Content, i) => {
                 const isActive = face === i
                 const isVisible = isActive || isRotating
@@ -497,24 +593,55 @@ export default function GlassCube({ onRecommendations }: { onRecommendations?: (
                       height: H,
                       transform: FACE_TRANSFORMS[i],
                       backfaceVisibility: 'hidden',
-                      backgroundColor: 'rgba(5, 5, 8, 0.95)',
-                      backdropFilter: 'blur(20px)',
-                      border: isActive ? '1px solid rgba(0, 229, 255, 0.3)' : '1px solid rgba(255,255,255,0.05)',
+                      background:
+                        'linear-gradient(180deg, rgba(5, 7, 13, 0.78) 0%, rgba(2, 4, 8, 0.92) 100%)',
+                      backdropFilter: 'blur(30px)',
+                      WebkitBackdropFilter: 'blur(30px)',
+                      border: isActive ? '1.5px solid rgba(0, 229, 255, 0.34)' : '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: 24,
                       boxShadow: isActive
-                        ? '0 30px 80px rgba(0,0,0,0.95), inset 0 0 20px rgba(0,229,255,0.05)'
-                        : 'none',
+                        ? '0 34px 64px rgba(0,0,0,0.46), inset 0 1px 0 rgba(255,255,255,0.04), inset 0 0 24px rgba(0,229,255,0.06)'
+                        : '0 24px 44px rgba(0,0,0,0.22)',
                       display: isVisible ? 'flex' : 'none',
                       pointerEvents: isActive && !isRotating ? 'auto' : 'none',
                       opacity: isVisible ? 1 : 0,
-                      transition: 'opacity 0.3s, border 0.5s, box-shadow 0.5s',
+                      transition:
+                        'opacity 220ms cubic-bezier(0.23,1,0.32,1), border-color 220ms cubic-bezier(0.23,1,0.32,1), box-shadow 220ms cubic-bezier(0.23,1,0.32,1)',
                       flexDirection: 'column',
                       isolation: 'isolate',
+                      overflow: 'hidden',
                     }}
                   >
+                    <div
+                      className="pointer-events-none absolute left-6 top-5 h-px right-8 bg-white/18"
+                    />
+                    <div
+                      className="pointer-events-none absolute right-8 top-10 bottom-14 w-px bg-white/10"
+                    />
+                    <div
+                      className="pointer-events-none absolute left-6 top-8 bottom-10 w-24 rounded-full"
+                      style={{
+                        background:
+                          'linear-gradient(90deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.03) 55%, rgba(255,255,255,0) 100%)',
+                        filter: 'blur(12px)',
+                        opacity: isActive ? 0.72 : 0.42,
+                        transform: `translateX(${interaction.shiftX * 0.45}px) rotate(-7deg)`,
+                      }}
+                    />
+                    <div
+                      className="pointer-events-none absolute h-64 w-64 rounded-full"
+                      style={{
+                        left: '50%',
+                        top: '42%',
+                        background: 'radial-gradient(circle, rgba(0,229,255,0.08) 0%, transparent 68%)',
+                        filter: 'blur(24px)',
+                        transform: `translate(calc(-50% + ${interaction.shiftX * 0.6}px), calc(-50% + ${interaction.shiftY * 0.4}px))`,
+                      }}
+                    />
                     {Content}
 
                     {isActive && (
-                      <div className="absolute inset-0 pointer-events-none z-50 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.1)_50%)] bg-[length:100%_4px] opacity-20 mix-blend-overlay" />
+                      <div className="absolute inset-0 pointer-events-none z-50 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.08)_50%)] bg-[length:100%_4px] opacity-16 mix-blend-overlay" />
                     )}
                   </motion.div>
                 )
@@ -531,6 +658,7 @@ export default function GlassCube({ onRecommendations }: { onRecommendations?: (
                   border: '1px solid rgba(255,255,255,0.05)',
                   pointerEvents: 'none',
                   display: isRotating ? 'block' : 'none',
+                  borderRadius: 28,
                 }}
               />
               <div
@@ -544,27 +672,29 @@ export default function GlassCube({ onRecommendations }: { onRecommendations?: (
                   border: '1px solid rgba(0,229,255,0.1)',
                   pointerEvents: 'none',
                   display: isRotating ? 'block' : 'none',
+                  borderRadius: 28,
                 }}
               />
             </motion.div>
-          </div>
+          </motion.div>
         </motion.div>
       </motion.div>
 
-      <div className="relative z-20 mt-8 flex items-center gap-12 font-mono text-[10px] uppercase tracking-[0.4em] text-white/40">
+      <div className="clearance-nav-shell relative z-20 mt-8 flex items-center gap-5 font-mono text-[10px] uppercase tracking-[0.28em] text-white/58">
         <button
           onClick={() => {
             if (!isRotating) rotateTo((Math.max(face, 0) + 3) % 4)
           }}
-          className="relative z-20 transition-colors hover:text-[#00E5FF]"
+          className="clearance-nav-btn"
+          aria-label="Previous clearance step"
         >
           Prev
         </button>
-        <div className="flex gap-6">
+        <div className="clearance-step-track" aria-hidden="true">
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
-              className={`h-[2px] w-12 transition-all duration-500 ${face === i ? 'bg-[#00E5FF] shadow-[0_0_12px_rgba(0,229,255,0.6)]' : 'bg-white/10'}`}
+              className={`clearance-step-line ${face === i ? 'clearance-step-line--active' : ''}`}
             />
           ))}
         </div>
@@ -572,7 +702,8 @@ export default function GlassCube({ onRecommendations }: { onRecommendations?: (
           onClick={() => {
             if (!isRotating) rotateTo((Math.max(face, 0) + 1) % 4)
           }}
-          className="relative z-20 transition-colors hover:text-[#00E5FF]"
+          className="clearance-nav-btn"
+          aria-label="Next clearance step"
         >
           Next
         </button>
@@ -609,7 +740,10 @@ export default function GlassCube({ onRecommendations }: { onRecommendations?: (
           text-transform: uppercase;
           letter-spacing: 0.1em;
           color: rgba(255,255,255,0.5);
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          transition:
+            color 180ms cubic-bezier(0.23,1,0.32,1),
+            border-color 180ms cubic-bezier(0.23,1,0.32,1),
+            padding-left 180ms cubic-bezier(0.23,1,0.32,1);
           cursor: pointer;
           background: transparent;
           width: 100%;
@@ -631,11 +765,82 @@ export default function GlassCube({ onRecommendations }: { onRecommendations?: (
           letter-spacing: 0.3em;
           text-transform: uppercase;
           cursor: pointer;
-          transition: all 0.3s ease;
+          transition:
+            transform 160ms cubic-bezier(0.23,1,0.32,1),
+            background-color 180ms cubic-bezier(0.23,1,0.32,1),
+            color 180ms cubic-bezier(0.23,1,0.32,1),
+            box-shadow 180ms cubic-bezier(0.23,1,0.32,1),
+            border-color 180ms cubic-bezier(0.23,1,0.32,1);
           position: relative;
           z-index: 20;
         }
         .monolith-cta-btn:hover { background: #00E5FF; color: #000; box-shadow: 0 0 20px rgba(0,229,255,0.4); }
+        .monolith-cta-btn:active { transform: scale(0.98); }
+
+        .clearance-nav-shell {
+          padding: 10px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          background:
+            linear-gradient(180deg, rgba(9, 15, 26, 0.82), rgba(3, 6, 12, 0.74)),
+            radial-gradient(circle at 50% 0%, rgba(0, 229, 255, 0.12), transparent 62%);
+          box-shadow:
+            0 22px 54px rgba(0, 0, 0, 0.34),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
+        }
+
+        .clearance-nav-btn {
+          min-width: 96px;
+          height: 44px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: rgba(255, 255, 255, 0.035);
+          color: rgba(255, 255, 255, 0.68);
+          transition:
+            transform 160ms cubic-bezier(0.23,1,0.32,1),
+            border-color 180ms cubic-bezier(0.23,1,0.32,1),
+            background-color 180ms cubic-bezier(0.23,1,0.32,1),
+            color 180ms cubic-bezier(0.23,1,0.32,1),
+            box-shadow 180ms cubic-bezier(0.23,1,0.32,1);
+        }
+
+        .clearance-nav-btn:hover {
+          border-color: rgba(0, 229, 255, 0.44);
+          background: rgba(0, 229, 255, 0.08);
+          color: #00E5FF;
+          box-shadow: inset 0 0 18px rgba(0, 229, 255, 0.06);
+        }
+
+        .clearance-nav-btn:active { transform: scale(0.97); }
+
+        .clearance-nav-btn:focus-visible {
+          outline: 2px solid #00E5FF;
+          outline-offset: 3px;
+        }
+
+        .clearance-step-track {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 184px;
+          padding: 0 8px;
+        }
+
+        .clearance-step-line {
+          height: 2px;
+          width: 38px;
+          background: rgba(255, 255, 255, 0.12);
+          transition:
+            width 360ms cubic-bezier(0.23,1,0.32,1),
+            background-color 360ms cubic-bezier(0.23,1,0.32,1),
+            box-shadow 360ms cubic-bezier(0.23,1,0.32,1);
+        }
+
+        .clearance-step-line--active {
+          width: 52px;
+          background: #00E5FF;
+          box-shadow: 0 0 14px rgba(0,229,255,0.62);
+        }
 
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

@@ -66,20 +66,20 @@ export default function Home() {
         onMouseMove={handleCanvasMove}
         onMouseLeave={resetCanvasGlow}
       >
-        <nav className="fixed top-0 left-0 z-50 w-full border-b border-white/20 bg-black/45 backdrop-blur-md">
+        <nav className="site-nav-shell fixed top-0 left-0 z-50 w-full">
           <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-5 md:px-12">
             <button
               onClick={() => handleNav('manifesto')}
-              className="font-mono text-[10px] uppercase tracking-[0.34em]"
+              className="site-nav-link font-mono text-[10px] uppercase tracking-[0.34em]"
             >
               ATRIQUET // 0.0
             </button>
             <div className="flex items-center gap-4 md:gap-10 font-mono text-[10px] uppercase tracking-[0.3em]">
-              <Link href="/homepage" className="hover:text-[#ff0000]">Homepage</Link>
-              <button onClick={() => handleNav('intelligence')} className="hover:text-[#ff0000]">Archive</button>
-              <button onClick={() => handleNav('intelligence')} className="hover:text-[#ff0000]">Intelligence</button>
-              <button onClick={() => handleNav('syndicate')} className="hover:text-[#ff0000]">Syndicate</button>
-              <Link href="/vton" className="hover:text-[#ff0000]">VTON</Link>
+              <Link href="/homepage" className="site-nav-link">Homepage</Link>
+              <button onClick={() => handleNav('intelligence')} className="site-nav-link">Archive</button>
+              <button onClick={() => handleNav('intelligence')} className="site-nav-link">Intelligence</button>
+              <button onClick={() => handleNav('syndicate')} className="site-nav-link">Syndicate</button>
+              <Link href="/vton" className="site-nav-link">VTON</Link>
             </div>
           </div>
         </nav>
@@ -92,15 +92,16 @@ export default function Home() {
                     initial={{ opacity: 0, y: 28 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8 }}
-                    className="font-display text-[min(24vw,180px)] italic leading-[0.83]"
+                    className="font-display text-[min(24vw,180px)] italic leading-[0.83] text-white"
                   >
                     ATRIQUET
                   </motion.h1>
+                  <div className="mt-5 h-px w-40 bg-gradient-to-r from-cyan-300/70 to-orange-400/80" />
                   <motion.p
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, delay: 0.15 }}
-                    className="mt-8 max-w-xl font-mono text-[10px] uppercase leading-6 tracking-[0.28em] text-white/70 md:text-xs"
+                    className="mt-8 max-w-xl font-mono text-[10px] uppercase leading-6 tracking-[0.28em] text-white/74 md:text-xs"
                   >
                     Algorithmic style intelligence for luxury buyers and creative directors. No fluff. No trend theater. Only raw, uncompromising signal.
                   </motion.p>
@@ -152,21 +153,21 @@ export default function Home() {
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true, amount: 0.2 }}
                       transition={{ duration: 0.5, delay: index * 0.1 }}
-                      className="group relative h-[560px] cursor-pointer overflow-hidden border border-white/30"
+                      className="group relative h-[560px] cursor-pointer overflow-hidden border border-white/30 bg-slate-950/50"
                     >
                       <img
                         alt={card.title}
                         src={card.image}
-                        className="h-full w-full object-cover grayscale transition-none group-hover:grayscale-0"
+                        className="h-full w-full object-cover grayscale transition-[transform,filter] duration-500 ease-out group-hover:scale-[1.03] group-hover:grayscale-0"
                       />
-                      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/0" />
+                      <div className="absolute inset-0 bg-black/42 transition-colors duration-300 group-hover:bg-black/10" />
                       <div className="absolute left-6 top-6 z-10 font-mono text-[10px] uppercase tracking-[0.26em] text-white mix-blend-difference">
                         [ Report {card.id} ]
                       </div>
-                      <h3 className="absolute bottom-16 left-6 z-10 bg-white px-3 py-2 font-display text-4xl italic leading-tight text-black group-hover:bg-black group-hover:text-white md:text-5xl">
+                      <h3 className="absolute bottom-16 left-6 z-10 border border-black/15 bg-white/95 px-3 py-2 font-display text-4xl italic leading-tight text-black transition-[color,background,border-color] duration-200 group-hover:border-orange-400/80 group-hover:bg-[#0b1220] group-hover:text-white md:text-5xl">
                         {card.title}
                       </h3>
-                      <div className="absolute bottom-6 left-6 right-6 z-10 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.26em] text-white mix-blend-difference">
+                      <div className="absolute bottom-6 left-6 right-6 z-10 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.26em] text-white/85 mix-blend-difference">
                         <span>Archive // 2026</span>
                         <span>Open Dossier</span>
                       </div>
@@ -178,20 +179,19 @@ export default function Home() {
 
           <section ref={syndicateRef} className="px-6 py-20 md:px-12 md:py-24 flex flex-col items-center">
               <div className="text-center mb-6">
-                <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-[#00E5FF]">The Syndicate</p>
+                <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-cyan-300">The Syndicate</p>
                 <h2 className="mt-4 font-display text-5xl italic leading-[0.9] md:text-7xl">Application For Clearance</h2>
                 <p className="mt-6 max-w-lg mx-auto font-mono text-[10px] uppercase tracking-widest leading-relaxed text-white/50">
                   Submit your profile for algorithmic curation. This gate remains narrow by design.
                 </p>
               </div>
               
-              {/* Glass Cube Monolith replaces the legacy form and controls its own flow natively */}
               <GlassCube />
           </section>
 
         </main>
 
-        <div className="ticker-wrap fixed bottom-0 left-0 z-50 w-full border-t border-white/20 bg-black/70">
+        <div className="ticker-wrap fixed bottom-0 left-0 z-50 w-full border-t border-white/20 bg-[#06080d]/70">
           <div className="ticker-track py-2 font-mono text-[10px] uppercase tracking-[0.27em] text-white/80">
             <span>Trend Velocity: +14.2%</span>
             <span>Current Sector: Neo-Monolith</span>

@@ -174,13 +174,13 @@ export default function ScrollFrameSequence({
                 <p className="font-mono text-[10px] uppercase tracking-[0.34em] text-white/70">{eyebrow}</p>
               ) : null}
             </div>
-            <div className="rounded-full border border-white/20 bg-black/30 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.28em] text-white/80 backdrop-blur">
+            <div className="rounded-full border border-white/20 bg-[#0a1528]/60 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.28em] text-white/85 backdrop-blur">
               Scroll To Open
             </div>
           </div>
 
           <div
-            className="max-w-5xl transition-all duration-300"
+            className="max-w-5xl transition-[opacity,transform] duration-300 ease-out"
             style={{
               opacity: 0.2 + reveal * 0.8,
               transform: `translate3d(0, ${32 - reveal * 32}px, 0)`
@@ -197,7 +197,7 @@ export default function ScrollFrameSequence({
             {ctaLabel ? (
               <button
                 onClick={onCtaClick}
-                className="mt-10 border border-white bg-white px-7 py-4 font-heading text-xs uppercase tracking-[0.28em] text-black transition hover:border-[#00E5FF] hover:bg-[#00E5FF] hover:text-white"
+                className="brutal-btn mt-10 px-7 py-4 font-heading text-xs uppercase tracking-[0.28em]"
               >
                 {ctaLabel}
               </button>

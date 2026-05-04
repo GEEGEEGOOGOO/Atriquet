@@ -158,7 +158,7 @@ if os.getenv("GEMINI_API_KEY"):
         model=gemini_model
     )
     logger.info(f"Gemini VTON model: {gemini_model}")
-    logger.info("Gemini VTON Service initialized")
+    logger.info("Gemini VTON Service initialized with gemini-3-pro-image-preview")
 else:
     logger.warning("GEMINI_API_KEY not found. VTON generation will be unavailable.")
 
@@ -166,7 +166,6 @@ recommendation_engine = RecommendationEngine(
     openrouter_service=openrouter_service,
     groq_service=groq_service,
     cache_manager=cache_manager,
-    clothing_image_service=clothing_image_service,
     vton_service=vton_service
 )
 
